@@ -1,0 +1,53 @@
+-- clean and load crm_prd_info
+
+INSERT INTO silver.crm_prd_info
+(
+    prd_id,
+    cat_id,
+    prd_key,
+    prd_nm,
+    prd_cost,
+    prd_line,
+    prd_start_dt,
+    prd_end_dt
+)
+SELECT
+    prd_id,
+    REPLACE(SUBSTRING(prd_key, 1, 5), '-', '_') AS cat_id,
+    SUBSTRING(prd_key, 7, LEN(prd_key)) AS prd_key,
+    prd_nm,
+    ISNULL(prd_cost, 0) AS prd_cost,
+    CASE
+        WHEN UPPER(TRIM(prd_line)) = 'M' THEN 'Manufacturing'
+        WHEN UPPER(TRIM(prd_line)) = 'R' THEN 'Retail'
+        WHEN UPPER(TRIM(prd_line)) = 'S' THEN 'Silver'
+        WHEN UPPER(TRIM(prd_line)) = 'T' THEN 'Tools'
+        ELSE 'N/A'
+    END AS prd_line,
+    CAST(prd_start_dt AS DATE) AS prd_start_dt,
+    CAST(
+        LEAD(prd_start_dt) OVER (
+            PARTITION BY prd_key
+            ORDER BY prd_start_dt
+        ) - 1 AS DATE
+    ) AS prd_end_dt
+FROM bronze.crm_prd_info;
+
+
+
+TRUNCATE TABLE silver.crm_prd_info;
+SELECT * FROM silver.crm_prd_info;
+SELECT COUNT(*) FROM silver.crm_prd_info;
+
+SELECT
+    COLUMN_NAME,
+    DATA_TYPE
+FROM INFORMATION_SCHEMA.COLUMNS
+WHERE TABLE_SCHEMA = 'silver'
+  AND TABLE_NAME = 'crm_prd_info';
+
+  ALTER TABLE silver.crm_prd_info
+ALTER COLUMN prd_start_dt DATE;
+
+ALTER TABLE silver.crm_prd_info
+ALTER COLUMN prd_end_dt DATE;
