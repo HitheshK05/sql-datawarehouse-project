@@ -51,3 +51,45 @@ ALTER COLUMN prd_start_dt DATE;
 
 ALTER TABLE silver.crm_prd_info
 ALTER COLUMN prd_end_dt DATE;
+
+
+-- cleaning did in this process
+SELECT TOP (1000) [prd_id]
+      ,[prd_key]
+      ,replace(substring (prd_key,1,5) , '-' , '_' )as cat_id
+      ,SUBSTRING (prd_key,7, len(prd_key)) as prd_key
+      ,[prd_nm]
+      ,isnull(prd_cost,0) as prd_cost
+      
+      ,case when upper(trim (prd_line)) = 'M' then 'Manufacturing'
+      when upper(trim (prd_line)) = 'M' then 'Manufacturing'
+      when upper(trim (prd_line)) = 'R' then 'Retail'
+      when upper(trim (prd_line)) = 'S' then 'Silver'
+      when upper(trim (prd_line)) = 'T' then 'Tools'
+      else 'N/A'
+      end as prd_line
+      ,cast(prd_start_dt as date) as prd_start_dt
+      ,cast(lead (prd_start_dt) over (partition by prd_key order by prd_start_dt)-1 as date) as prd_end_dt_test
+  FROM [datawarehouse].[bronze].[crm_prd_info]
+  where replace(substring (prd_key,1,5) , '-' , '_' ) not in
+  (select distinct id from bronze.erp_px_cat_g1v2)
+
+  select sls_prd_key from bronze.crm_sales_details
+
+  select prd_cost
+  from silver.crm_prd_info
+  where prd_cost < 0 or prd_cost is null
+
+  select distinct prd_line
+    from silver.crm_prd_info
+
+
+    SELECT
+    prd_id,
+    prd_key,
+    prd_nm,
+    prd_start_dt,
+    prd_end_dt,
+    lead (prd_start_dt) over (partition by prd_key order by prd_start_dt)-1 as prd_end_dt_test
+FROM bronze.crm_prd_info
+WHERE prd_key IN ('AC-HE-HL-U509-R', 'AC-HE-HL-U509')
